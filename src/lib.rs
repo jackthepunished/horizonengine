@@ -21,11 +21,11 @@ pub use winit;
 
 /// Prelude module for common imports
 pub mod prelude {
-    pub use crate::core::{Engine, EngineConfig, EngineContext, Game};
-    pub use crate::ecs::{Transform, World};
+    pub use crate::core::{DebugInfo, Engine, EngineConfig, EngineContext, FrameStats, Game};
+    pub use crate::ecs::{Name, Transform, Velocity, World};
     pub use crate::input::Input;
     pub use crate::physics::{ColliderHandle, Physics, RigidBodyHandle};
-    pub use crate::renderer::{Camera, Light, Mesh, RenderFrame, Renderer, Vertex};
+    pub use crate::renderer::{Camera, Light, Material, Mesh, RenderFrame, Renderer, Vertex};
     pub use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
     pub use winit::keyboard::KeyCode;
 }

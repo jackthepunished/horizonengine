@@ -10,6 +10,7 @@ use winit::{
     window::{Window, WindowId},
 };
 
+use crate::core::debug::DebugInfo;
 use crate::core::Time;
 use crate::ecs::World;
 use crate::input::Input;
@@ -95,6 +96,8 @@ pub struct EngineContext {
     pub input: Input,
     /// ECS world
     pub world: World,
+    /// Debug information and stats
+    pub debug: DebugInfo,
     /// Renderer (available after initialization)
     renderer: Option<Renderer>,
     /// Window size
@@ -109,6 +112,7 @@ impl EngineContext {
             time: Time::new(),
             input: Input::new(),
             world: World::new(),
+            debug: DebugInfo::new(),
             renderer: None,
             window_size: PhysicalSize::new(width, height),
             should_quit: false,
@@ -277,6 +281,9 @@ impl<G: Game> ApplicationHandler for Engine<G> {
             WindowEvent::RedrawRequested => {
                 // Update time
                 self.context.time.update();
+
+                // Update debug stats
+                self.context.debug.record_frame(self.context.time.delta());
 
                 // Update game logic
                 self.game.update(&mut self.context);
