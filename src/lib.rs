@@ -5,8 +5,10 @@
 //! - Entity Component System (ECS) architecture
 //! - Physics simulation with rapier3d
 //! - Input handling with winit
+//! - Audio playback with rodio
 
 pub mod assets;
+pub mod audio;
 pub mod core;
 pub mod ecs;
 pub mod input;

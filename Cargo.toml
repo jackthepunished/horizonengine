@@ -28,3 +28,4 @@ bytemuck = { version = "1.21", features = ["derive"] }
 pollster = "0.4"
 image = { version = "0.25.9", features = ["png", "jpeg"] }
 smallvec = "1.15.1"
+rodio = "0.21.1"
