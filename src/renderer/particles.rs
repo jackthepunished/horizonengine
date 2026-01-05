@@ -342,6 +342,13 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
 }
 
 /// Simple pseudo-random (deterministic for testing)
+///
+/// # Warning
+/// This uses a fixed seed and is deterministic. While good for testing,
+/// visual effects in production should use a proper RNG (like `rand::ThreadRng`)
+/// to avoid repeating patterns.
+///
+/// TODO: Replace with `rand` crate or injectable RNG trait in Phase 4.
 fn rand_f32() -> f32 {
     use std::cell::Cell;
     thread_local! {
