@@ -120,15 +120,24 @@ impl Skeleton {
     #[must_use]
     pub fn compute_world_matrices(&self) -> Vec<Mat4> {
         let mut world_matrices = vec![Mat4::IDENTITY; self.bones.len()];
+        let mut stack = Vec::with_capacity(self.bones.len());
 
-        // Process bones in order (parents before children)
-        for (i, bone) in self.bones.iter().enumerate() {
+        // Start with roots
+        for &root in &self.roots {
+            stack.push((root, Mat4::IDENTITY));
+        }
+
+        // Traverse hierarchy
+        while let Some((index, parent_world)) = stack.pop() {
+            let bone = &self.bones[index];
             let local = bone.local_matrix();
-            world_matrices[i] = if let Some(parent) = bone.parent {
-                world_matrices[parent] * local
-            } else {
-                local
-            };
+            let world = parent_world * local;
+            world_matrices[index] = world;
+
+            // Add children to stack
+            for &child in &bone.children {
+                stack.push((child, world));
+            }
         }
 
         world_matrices
