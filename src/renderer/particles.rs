@@ -12,7 +12,7 @@ use wgpu::util::DeviceExt;
 pub struct Particle {
     /// World position
     pub position: [f32; 3],
-    /// Remaining lifetime (seconds)
+    /// Total lifetime duration (seconds)
     pub lifetime: f32,
     /// Velocity
     pub velocity: [f32; 3],
