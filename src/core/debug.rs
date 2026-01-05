@@ -66,12 +66,19 @@ impl FrameStats {
         }
 
         let count = self.frame_times.len() as f32;
-        let avg = total / self.frame_times.len() as u32;
+        let total_secs = total.as_secs_f32();
 
-        self.avg_frame_time_ms = avg.as_secs_f32() * 1000.0;
+        // Guard against division by zero
+        if total_secs > 0.0 {
+            self.avg_frame_time_ms = (total_secs / count) * 1000.0;
+            self.fps = count / total_secs;
+        } else {
+            self.avg_frame_time_ms = 0.0;
+            self.fps = 0.0;
+        }
+
         self.min_frame_time_ms = min.as_secs_f32() * 1000.0;
         self.max_frame_time_ms = max.as_secs_f32() * 1000.0;
-        self.fps = count / total.as_secs_f32();
     }
 
     /// Get current FPS

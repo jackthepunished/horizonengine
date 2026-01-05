@@ -15,25 +15,29 @@ pub struct MaterialUniform {
     pub specular: f32,
     /// Shininess factor
     pub shininess: f32,
+    /// Whether to use texture (1.0) or solid color (0.0)
+    pub use_texture: f32,
     /// Padding for alignment
-    _padding2: [f32; 2],
+    _padding2: f32,
 }
 
 impl MaterialUniform {
-    pub fn new(color: Vec3, specular: f32, shininess: f32) -> Self {
+    /// Create a new material uniform
+    pub fn new(color: Vec3, specular: f32, shininess: f32, use_texture: bool) -> Self {
         Self {
             color: color.into(),
             _padding1: 0.0,
             specular,
             shininess,
-            _padding2: [0.0; 2],
+            use_texture: if use_texture { 1.0 } else { 0.0 },
+            _padding2: 0.0,
         }
     }
 }
 
 impl Default for MaterialUniform {
     fn default() -> Self {
-        Self::new(Vec3::new(0.8, 0.8, 0.8), 0.5, 32.0)
+        Self::new(Vec3::new(0.8, 0.8, 0.8), 0.5, 32.0, false)
     }
 }
 
@@ -46,6 +50,8 @@ pub struct Material {
     pub specular: f32,
     /// Shininess exponent
     pub shininess: f32,
+    /// Whether this material uses a texture
+    pub use_texture: bool,
 }
 
 impl Material {
@@ -55,6 +61,7 @@ impl Material {
             color,
             specular: 0.5,
             shininess: 32.0,
+            use_texture: false,
         }
     }
 
@@ -64,6 +71,7 @@ impl Material {
             color,
             specular: 0.0,
             shininess: 1.0,
+            use_texture: false,
         }
     }
 
@@ -73,7 +81,23 @@ impl Material {
             color,
             specular: 1.0,
             shininess: 64.0,
+            use_texture: false,
         }
+    }
+
+    /// Create a textured material with a tint color
+    pub fn textured(tint: Vec3) -> Self {
+        Self {
+            color: tint,
+            specular: 0.5,
+            shininess: 32.0,
+            use_texture: true,
+        }
+    }
+
+    /// Create a textured material with white tint (no color modification)
+    pub fn textured_default() -> Self {
+        Self::textured(Vec3::ONE)
     }
 
     /// Red material
@@ -103,7 +127,7 @@ impl Material {
 
     /// Convert to uniform data
     pub fn to_uniform(&self) -> MaterialUniform {
-        MaterialUniform::new(self.color, self.specular, self.shininess)
+        MaterialUniform::new(self.color, self.specular, self.shininess, self.use_texture)
     }
 }
 

@@ -1,6 +1,7 @@
 //! Physics simulation using rapier3d
 
 use glam::{Quat, Vec3};
+use nalgebra::UnitQuaternion;
 use rapier3d::prelude::*;
 
 /// Handle to a rigid body in the physics world
@@ -10,6 +11,17 @@ pub struct RigidBodyHandle(pub rapier3d::dynamics::RigidBodyHandle);
 /// Handle to a collider in the physics world
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ColliderHandle(pub rapier3d::geometry::ColliderHandle);
+
+/// Convert glam Quat to rapier3d UnitQuaternion
+fn quat_to_rapier(q: Quat) -> UnitQuaternion<f32> {
+    UnitQuaternion::from_quaternion(nalgebra::Quaternion::new(q.w, q.x, q.y, q.z))
+}
+
+/// Convert rapier3d UnitQuaternion to glam Quat
+fn rapier_to_quat(uq: &UnitQuaternion<f32>) -> Quat {
+    let q = uq.quaternion();
+    Quat::from_xyzw(q.i, q.j, q.k, q.w)
+}
 
 /// Physics world manager
 pub struct Physics {
@@ -86,41 +98,34 @@ impl Physics {
 
     /// Create a static rigid body (doesn't move)
     pub fn create_static_body(&mut self, position: Vec3, rotation: Quat) -> RigidBodyHandle {
-        let body = RigidBodyBuilder::fixed()
-            .translation(vector![position.x, position.y, position.z])
-            .rotation(vector![
-                rotation.x * 2.0 * rotation.w.acos(),
-                rotation.y * 2.0 * rotation.w.acos(),
-                rotation.z * 2.0 * rotation.w.acos()
-            ])
-            .build();
+        let isometry = Isometry::from_parts(
+            nalgebra::Translation3::new(position.x, position.y, position.z),
+            quat_to_rapier(rotation),
+        );
+        let body = RigidBodyBuilder::fixed().position(isometry).build();
 
         RigidBodyHandle(self.rigid_body_set.insert(body))
     }
 
     /// Create a dynamic rigid body (affected by forces)
     pub fn create_dynamic_body(&mut self, position: Vec3, rotation: Quat) -> RigidBodyHandle {
-        let body = RigidBodyBuilder::dynamic()
-            .translation(vector![position.x, position.y, position.z])
-            .rotation(vector![
-                rotation.x * 2.0 * rotation.w.acos(),
-                rotation.y * 2.0 * rotation.w.acos(),
-                rotation.z * 2.0 * rotation.w.acos()
-            ])
-            .build();
+        let isometry = Isometry::from_parts(
+            nalgebra::Translation3::new(position.x, position.y, position.z),
+            quat_to_rapier(rotation),
+        );
+        let body = RigidBodyBuilder::dynamic().position(isometry).build();
 
         RigidBodyHandle(self.rigid_body_set.insert(body))
     }
 
     /// Create a kinematic rigid body (controlled directly)
     pub fn create_kinematic_body(&mut self, position: Vec3, rotation: Quat) -> RigidBodyHandle {
+        let isometry = Isometry::from_parts(
+            nalgebra::Translation3::new(position.x, position.y, position.z),
+            quat_to_rapier(rotation),
+        );
         let body = RigidBodyBuilder::kinematic_position_based()
-            .translation(vector![position.x, position.y, position.z])
-            .rotation(vector![
-                rotation.x * 2.0 * rotation.w.acos(),
-                rotation.y * 2.0 * rotation.w.acos(),
-                rotation.z * 2.0 * rotation.w.acos()
-            ])
+            .position(isometry)
             .build();
 
         RigidBodyHandle(self.rigid_body_set.insert(body))
@@ -200,10 +205,9 @@ impl Physics {
 
     /// Get the rotation of a rigid body
     pub fn get_rotation(&self, body: RigidBodyHandle) -> Option<Quat> {
-        self.rigid_body_set.get(body.0).map(|rb| {
-            let rot = rb.rotation();
-            Quat::from_xyzw(rot.i, rot.j, rot.k, rot.w)
-        })
+        self.rigid_body_set
+            .get(body.0)
+            .map(|rb| rapier_to_quat(rb.rotation()))
     }
 
     /// Set the position of a kinematic body

@@ -1,4 +1,4 @@
-// Basic 3D shader with lighting and material support
+// Basic 3D shader with lighting, material, and texture support
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -38,13 +38,18 @@ struct MaterialUniform {
     _padding1: f32,
     specular: f32,
     shininess: f32,
-    _padding2: vec2<f32>,
+    use_texture: f32,  // 1.0 = use texture, 0.0 = use material color only
+    _padding2: f32,
 }
 
 @group(0) @binding(0) var<uniform> camera: CameraUniform;
 @group(1) @binding(0) var<uniform> model: ModelUniform;
 @group(2) @binding(0) var<uniform> light: LightUniform;
 @group(3) @binding(0) var<uniform> material: MaterialUniform;
+
+// Texture bindings
+@group(4) @binding(0) var diffuse_texture: texture_2d<f32>;
+@group(4) @binding(1) var diffuse_sampler: sampler;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -61,18 +66,22 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Use material properties
-    let object_color = material.color;
+    // Sample texture and blend with material color
+    let tex_color = textureSample(diffuse_texture, diffuse_sampler, in.uv);
+    
+    // Mix between material color and texture based on use_texture flag
+    let base_color = mix(material.color, tex_color.rgb * material.color, material.use_texture);
+    
     let specular_strength = material.specular;
     let shininess = material.shininess;
 
     // Ambient
-    let ambient = light.ambient * object_color;
+    let ambient = light.ambient * base_color;
 
     // Diffuse
     let light_dir = normalize(light.position - in.world_position);
     let diff = max(dot(in.world_normal, light_dir), 0.0);
-    let diffuse = diff * light.color * object_color;
+    let diffuse = diff * light.color * base_color;
 
     // Specular (Blinn-Phong)
     let view_dir = normalize(camera.view_pos - in.world_position);
@@ -81,6 +90,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let specular = specular_strength * spec * light.color;
 
     let result = ambient + diffuse + specular;
+    
+    // Preserve texture alpha
+    let alpha = mix(1.0, tex_color.a, material.use_texture);
 
-    return vec4<f32>(result, 1.0);
+    return vec4<f32>(result, alpha);
 }
+
