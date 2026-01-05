@@ -10,8 +10,8 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use crate::core::debug::DebugInfo;
 use crate::core::Time;
+use crate::core::debug::DebugInfo;
 use crate::ecs::World;
 use crate::input::Input;
 use crate::renderer::Renderer;
@@ -212,10 +212,7 @@ impl<G: Game> ApplicationHandler for Engine<G> {
         );
 
         // Initialize renderer
-        let renderer = pollster::block_on(Renderer::new(
-            Arc::clone(&window),
-            self.config.vsync,
-        ));
+        let renderer = pollster::block_on(Renderer::new(Arc::clone(&window), self.config.vsync));
 
         self.context.renderer = Some(renderer);
         self.window = Some(window);

@@ -63,7 +63,8 @@ impl Transform {
 
     /// Rotate by euler angles (in radians)
     pub fn rotate_euler(&mut self, euler: Vec3) {
-        self.rotation = Quat::from_euler(glam::EulerRot::XYZ, euler.x, euler.y, euler.z) * self.rotation;
+        self.rotation =
+            Quat::from_euler(glam::EulerRot::XYZ, euler.x, euler.y, euler.z) * self.rotation;
     }
 
     /// Look at a target position
@@ -73,7 +74,8 @@ impl Transform {
         // Adjust for up vector
         let right = forward.cross(up).normalize();
         let adjusted_up = right.cross(forward);
-        self.rotation = Quat::from_mat4(&Mat4::look_at_rh(self.position, target, adjusted_up)).inverse();
+        self.rotation =
+            Quat::from_mat4(&Mat4::look_at_rh(self.position, target, adjusted_up)).inverse();
     }
 }
 

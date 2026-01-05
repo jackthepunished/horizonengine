@@ -138,10 +138,9 @@ impl Game for DemoGame {
             force.x += force_strength;
         }
 
-        if let Some(body) = self.cube_body {
-            if force != Vec3::ZERO {
-                self.physics.apply_force(body, force);
-            }
+        // Apply force if cube exists and force is non-zero
+        if let Some(body) = self.cube_body.filter(|_| force != Vec3::ZERO) {
+            self.physics.apply_force(body, force);
         }
 
         // Step physics

@@ -2,6 +2,6 @@
 //!
 //! Built on top of rapier3d
 
-mod physics;
+mod world;
 
-pub use physics::{ColliderHandle, Physics, RaycastHit, RigidBodyHandle};
+pub use world::{ColliderHandle, Physics, RaycastHit, RigidBodyHandle};

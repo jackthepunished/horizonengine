@@ -137,10 +137,11 @@ impl Physics {
             .density(density)
             .build();
 
-        ColliderHandle(
-            self.collider_set
-                .insert_with_parent(collider, body.0, &mut self.rigid_body_set),
-        )
+        ColliderHandle(self.collider_set.insert_with_parent(
+            collider,
+            body.0,
+            &mut self.rigid_body_set,
+        ))
     }
 
     /// Add a sphere collider to a rigid body
@@ -152,10 +153,11 @@ impl Physics {
     ) -> ColliderHandle {
         let collider = ColliderBuilder::ball(radius).density(density).build();
 
-        ColliderHandle(
-            self.collider_set
-                .insert_with_parent(collider, body.0, &mut self.rigid_body_set),
-        )
+        ColliderHandle(self.collider_set.insert_with_parent(
+            collider,
+            body.0,
+            &mut self.rigid_body_set,
+        ))
     }
 
     /// Add a capsule collider to a rigid body
@@ -170,20 +172,22 @@ impl Physics {
             .density(density)
             .build();
 
-        ColliderHandle(
-            self.collider_set
-                .insert_with_parent(collider, body.0, &mut self.rigid_body_set),
-        )
+        ColliderHandle(self.collider_set.insert_with_parent(
+            collider,
+            body.0,
+            &mut self.rigid_body_set,
+        ))
     }
 
     /// Add a ground plane collider
     pub fn add_ground_plane(&mut self, body: RigidBodyHandle) -> ColliderHandle {
         let collider = ColliderBuilder::cuboid(100.0, 0.1, 100.0).build();
 
-        ColliderHandle(
-            self.collider_set
-                .insert_with_parent(collider, body.0, &mut self.rigid_body_set),
-        )
+        ColliderHandle(self.collider_set.insert_with_parent(
+            collider,
+            body.0,
+            &mut self.rigid_body_set,
+        ))
     }
 
     /// Get the position of a rigid body

@@ -103,10 +103,7 @@ impl FrameStats {
     pub fn format_stats(&self) -> String {
         format!(
             "FPS: {:.1} | Frame: {:.2}ms (min: {:.2}, max: {:.2})",
-            self.fps,
-            self.avg_frame_time_ms,
-            self.min_frame_time_ms,
-            self.max_frame_time_ms
+            self.fps, self.avg_frame_time_ms, self.min_frame_time_ms, self.max_frame_time_ms
         )
     }
 }

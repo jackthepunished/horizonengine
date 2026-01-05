@@ -1,5 +1,5 @@
 //! Input handling module
 
-mod input;
+mod state;
 
-pub use input::Input;
+pub use state::Input;

@@ -166,10 +166,7 @@ impl Mesh {
                 vertices.push(Vertex::new(
                     position.into(),
                     normal.into(),
-                    [
-                        segment as f32 / segments as f32,
-                        ring as f32 / rings as f32,
-                    ],
+                    [segment as f32 / segments as f32, ring as f32 / rings as f32],
                 ));
             }
         }

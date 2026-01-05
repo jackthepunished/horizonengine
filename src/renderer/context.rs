@@ -7,8 +7,8 @@ use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
-use super::mesh::{Mesh, Vertex};
 use super::Camera;
+use super::mesh::{Mesh, Vertex};
 
 /// Uniform buffer for camera data
 #[repr(C)]
@@ -148,7 +148,9 @@ impl Renderer {
         });
 
         // Create surface
-        let surface = instance.create_surface(window).expect("Failed to create surface");
+        let surface = instance
+            .create_surface(window)
+            .expect("Failed to create surface");
 
         // Request adapter
         let adapter = instance
@@ -532,31 +534,30 @@ impl Renderer {
     }
 
     /// Create a render pass
-    pub fn begin_render_pass<'a>(
-        &'a self,
-        frame: &'a mut RenderFrame,
-    ) -> wgpu::RenderPass<'a> {
-        frame.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Render Pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &frame.view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(self.clear_color),
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: &self.depth_view,
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(1.0),
-                    store: wgpu::StoreOp::Store,
+    pub fn begin_render_pass<'a>(&'a self, frame: &'a mut RenderFrame) -> wgpu::RenderPass<'a> {
+        frame
+            .encoder
+            .begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &frame.view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(self.clear_color),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
                 }),
-                stencil_ops: None,
-            }),
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        })
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            })
     }
 
     /// Draw a mesh with a transform

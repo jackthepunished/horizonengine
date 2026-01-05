@@ -1,9 +1,9 @@
 //! Input handling
 
+use glam::Vec2;
 use std::collections::HashSet;
 use winit::event::{ElementState, MouseButton};
 use winit::keyboard::KeyCode;
-use glam::Vec2;
 
 /// Input state manager
 #[derive(Debug)]
