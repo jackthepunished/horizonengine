@@ -173,6 +173,10 @@ impl AnimationPlayer {
         self.clip.as_ref()
     }
 
+    /// Get the normalized playback time (0.0 to 1.0)
+    ///
+    /// Useful for UI progress bars or syncing with other systems.
+    /// Returns 0.0 if no clip is loaded or duration is zero.
     #[must_use]
     pub fn normalized_time(&self) -> f32 {
         if let Some(clip) = &self.clip
