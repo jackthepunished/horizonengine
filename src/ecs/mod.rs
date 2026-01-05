@@ -5,5 +5,5 @@
 mod components;
 mod world;
 
-pub use components::Transform;
+pub use components::{Name, Transform, Velocity};
 pub use world::World;

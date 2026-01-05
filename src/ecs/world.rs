@@ -27,12 +27,12 @@ impl World {
     }
 
     /// Get a reference to a component
-    pub fn get<T: hecs::Component>(&self, entity: Entity) -> Result<hecs::Ref<T>, hecs::ComponentError> {
+    pub fn get<T: hecs::Component>(&self, entity: Entity) -> Result<hecs::Ref<'_, T>, hecs::ComponentError> {
         self.inner.get::<&T>(entity)
     }
 
     /// Get a mutable reference to a component
-    pub fn get_mut<T: hecs::Component>(&mut self, entity: Entity) -> Result<hecs::RefMut<T>, hecs::ComponentError> {
+    pub fn get_mut<T: hecs::Component>(&mut self, entity: Entity) -> Result<hecs::RefMut<'_, T>, hecs::ComponentError> {
         self.inner.get::<&mut T>(entity)
     }
 

@@ -4,4 +4,4 @@
 
 mod physics;
 
-pub use physics::Physics;
+pub use physics::{ColliderHandle, Physics, RaycastHit, RigidBodyHandle};

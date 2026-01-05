@@ -5,5 +5,5 @@
 mod engine;
 mod time;
 
-pub use engine::{Engine, EngineConfig};
+pub use engine::{Engine, EngineConfig, EngineContext, Game};
 pub use time::Time;
