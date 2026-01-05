@@ -14,7 +14,7 @@ mod skybox;
 mod texture;
 
 pub use camera::Camera;
-pub use context::{Light, ModelUniform, RenderFrame, Renderer};
+pub use context::{Light, ModelUniform, RenderFrame, Renderer, UiRect};
 pub use lights::{DirectionalLight, GpuLight, LightManager, LightStorage, PointLight, SpotLight};
 pub use material::{Material, MaterialUniform};
 pub use mesh::{Mesh, Vertex};

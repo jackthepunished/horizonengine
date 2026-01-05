@@ -43,13 +43,13 @@ struct MaterialUniform {
 }
 
 @group(0) @binding(0) var<uniform> camera: CameraUniform;
+@group(0) @binding(1) var<uniform> light: LightUniform;
 @group(1) @binding(0) var<uniform> model: ModelUniform;
-@group(2) @binding(0) var<uniform> light: LightUniform;
-@group(3) @binding(0) var<uniform> material: MaterialUniform;
+@group(2) @binding(0) var<uniform> material: MaterialUniform;
 
 // Texture bindings
-@group(4) @binding(0) var diffuse_texture: texture_2d<f32>;
-@group(4) @binding(1) var diffuse_sampler: sampler;
+@group(2) @binding(1) var diffuse_texture: texture_2d<f32>;
+@group(2) @binding(2) var diffuse_sampler: sampler;
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -96,4 +96,3 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     return vec4<f32>(result, alpha);
 }
-

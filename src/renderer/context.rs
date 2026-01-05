@@ -8,7 +8,9 @@ use wgpu::util::DeviceExt;
 use winit::window::Window;
 
 use super::Camera;
+use super::material::MaterialUniform;
 use super::mesh::{Mesh, Vertex};
+use super::texture::Texture;
 
 /// Uniform buffer for camera data
 #[repr(C)]
@@ -126,11 +128,15 @@ pub struct Renderer {
     depth_view: wgpu::TextureView,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
-    camera_bind_group: wgpu::BindGroup,
     model_bind_group_layout: wgpu::BindGroupLayout,
+    global_bind_group: wgpu::BindGroup,
+    default_material_bind_group: wgpu::BindGroup,
     light_uniform: LightUniform,
     light_buffer: wgpu::Buffer,
-    light_bind_group: wgpu::BindGroup,
+    particle_pipeline: wgpu::RenderPipeline,
+    ui_pipeline: wgpu::RenderPipeline,
+    ui_screen_size_buffer: wgpu::Buffer,
+    ui_screen_size_bind_group: wgpu::BindGroup,
     /// Clear color
     pub clear_color: wgpu::Color,
 }
@@ -222,28 +228,56 @@ impl Renderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group_layout =
+        let global_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Camera Bind Group Layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
+                label: Some("Global Bind Group Layout"),
+                entries: &[
+                    // Camera
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
                     },
-                    count: None,
-                }],
+                    // Light
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
             });
 
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Camera Bind Group"),
-            layout: &camera_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: camera_buffer.as_entire_binding(),
-            }],
+        // Create light uniform buffer
+        let light_uniform = LightUniform::new();
+        let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Light Buffer"),
+            contents: bytemuck::cast_slice(&[light_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let global_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Global Bind Group"),
+            layout: &global_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: light_buffer.as_entire_binding(),
+                },
+            ],
         });
 
         // Create model bind group layout
@@ -262,36 +296,69 @@ impl Renderer {
                 }],
             });
 
-        // Create light uniform buffer
-        let light_uniform = LightUniform::new();
-        let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Light Buffer"),
-            contents: bytemuck::cast_slice(&[light_uniform]),
+        // Create material bind group layout
+        let material_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Material Bind Group Layout"),
+                entries: &[
+                    // Material uniform
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    // Texture
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    // Sampler
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            });
+
+        // Create default texture and material bind group
+        let default_texture = Texture::white(&device, &queue);
+        let material_uniform = MaterialUniform::default();
+        let material_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Default Material Buffer"),
+            contents: bytemuck::cast_slice(&[material_uniform]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let light_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Light Bind Group Layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
+        let default_material_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Default Material Bind Group"),
+            layout: &material_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
-
-        let light_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Light Bind Group"),
-            layout: &light_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: light_buffer.as_entire_binding(),
-            }],
+                    resource: material_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&default_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&default_texture.sampler),
+                },
+            ],
         });
 
         // Create render pipeline
@@ -299,9 +366,9 @@ impl Renderer {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    &camera_bind_group_layout,
+                    &global_bind_group_layout,
                     &model_bind_group_layout,
-                    &light_bind_group_layout,
+                    &material_bind_group_layout,
                 ],
                 push_constant_ranges: &[],
             });
@@ -350,6 +417,151 @@ impl Renderer {
             cache: None,
         });
 
+        // Create particle pipeline
+        let particle_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Particle Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("particle.wgsl").into()),
+        });
+
+        let particle_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Particle Pipeline Layout"),
+                bind_group_layouts: &[&global_bind_group_layout],
+                push_constant_ranges: &[],
+            });
+
+        let particle_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Particle Pipeline"),
+            layout: Some(&particle_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &particle_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<super::particles::Particle>() as u64,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &wgpu::vertex_attr_array![
+                        0 => Float32x3, // position
+                        1 => Float32,   // lifetime
+                        2 => Float32x3, // velocity
+                        3 => Float32,   // age
+                        4 => Float32x4, // color
+                        5 => Float32,   // size
+                        6 => Float32,   // rotation
+                    ],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &particle_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                ..Default::default()
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        // Create UI pipeline
+        let ui_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("UI Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("ui.wgsl").into()),
+        });
+
+        let ui_screen_size_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("UI Screen Size Buffer"),
+            contents: bytemuck::cast_slice(&[size.0 as f32, size.1 as f32]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let ui_screen_size_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("UI Screen Size Layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let ui_screen_size_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("UI Screen Size Bind Group"),
+            layout: &ui_screen_size_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: ui_screen_size_buffer.as_entire_binding(),
+            }],
+        });
+
+        let ui_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("UI Pipeline Layout"),
+            bind_group_layouts: &[&ui_screen_size_bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let ui_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("UI Pipeline"),
+            layout: Some(&ui_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &ui_shader,
+                entry_point: Some("vs_main"),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: 32, // pos(8) + size(8) + color(16)
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &wgpu::vertex_attr_array![
+                        0 => Float32x2, // position
+                        1 => Float32x2, // size
+                        2 => Float32x4, // color
+                    ],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &ui_shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                ..Default::default()
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Always,
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
         Self {
             surface,
             device,
@@ -361,11 +573,15 @@ impl Renderer {
             depth_view,
             camera_uniform,
             camera_buffer,
-            camera_bind_group,
+            global_bind_group,
             model_bind_group_layout,
+            default_material_bind_group,
             light_uniform,
             light_buffer,
-            light_bind_group,
+            particle_pipeline,
+            ui_pipeline,
+            ui_screen_size_buffer,
+            ui_screen_size_bind_group,
             clear_color: wgpu::Color {
                 r: 0.1,
                 g: 0.1,
@@ -413,6 +629,13 @@ impl Renderer {
                 Self::create_depth_texture(&self.device, width, height);
             self.depth_texture = depth_texture;
             self.depth_view = depth_view;
+
+            // Update UI screen size
+            self.queue.write_buffer(
+                &self.ui_screen_size_buffer,
+                0,
+                bytemuck::cast_slice(&[width as f32, height as f32]),
+            );
 
             log::debug!("Resized to {}x{}", width, height);
         }
@@ -572,9 +795,9 @@ impl Renderer {
         }
 
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+        render_pass.set_bind_group(0, &self.global_bind_group, &[]);
         render_pass.set_bind_group(1, model_bind_group, &[]);
-        render_pass.set_bind_group(2, &self.light_bind_group, &[]);
+        render_pass.set_bind_group(2, &self.default_material_bind_group, &[]);
         render_pass.set_vertex_buffer(0, mesh.vertex_buffer.as_ref().unwrap().slice(..));
         render_pass.set_index_buffer(
             mesh.index_buffer.as_ref().unwrap().slice(..),
@@ -592,6 +815,59 @@ impl Renderer {
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
+
+    /// Draw particles
+    pub fn draw_particles<'a>(
+        &'a self,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        emitter: &'a super::particles::ParticleEmitter,
+    ) {
+        if emitter.particle_count() == 0 {
+            return;
+        }
+
+        let buffer = match emitter.buffer() {
+            Some(b) => b,
+            None => return,
+        };
+
+        render_pass.set_pipeline(&self.particle_pipeline);
+        render_pass.set_bind_group(0, &self.global_bind_group, &[]);
+        render_pass.set_vertex_buffer(0, buffer.slice(..));
+        // Draw 6 vertices per instance (2 triangles)
+        render_pass.draw(0..6, 0..emitter.particle_count() as u32);
+    }
+
+    /// Draw UI rectangles
+    pub fn draw_ui<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>, rects: &[UiRect]) {
+        if rects.is_empty() {
+            return;
+        }
+
+        // Create a temporary buffer for UI rects
+        let buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Temp UI Buffer"),
+                contents: bytemuck::cast_slice(rects),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        render_pass.set_pipeline(&self.ui_pipeline);
+        render_pass.set_bind_group(0, &self.ui_screen_size_bind_group, &[]);
+        render_pass.set_vertex_buffer(0, buffer.slice(..));
+        // Draw 6 vertices per instance
+        render_pass.draw(0..6, 0..rects.len() as u32);
+    }
+}
+
+/// UI Rect for rendering
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct UiRect {
+    pub position: [f32; 2],
+    pub size: [f32; 2],
+    pub color: [f32; 4],
 }
 
 /// A render frame in progress
