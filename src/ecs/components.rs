@@ -1,9 +1,10 @@
 //! Common ECS components
 
 use glam::{Mat4, Quat, Vec3};
+use serde::{Deserialize, Serialize};
 
 /// Transform component for position, rotation, and scale
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Transform {
     /// Position in world space
     pub position: Vec3,
@@ -90,14 +91,14 @@ impl Default for Transform {
 }
 
 /// Velocity component for physics
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Velocity {
     pub linear: Vec3,
     pub angular: Vec3,
 }
 
 /// Name component for debugging
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Name(pub String);
 
 impl Name {
