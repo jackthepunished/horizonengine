@@ -6,6 +6,7 @@
 //! - Physics simulation with rapier3d
 //! - Input handling with winit
 
+pub mod assets;
 pub mod core;
 pub mod ecs;
 pub mod input;
@@ -21,6 +22,7 @@ pub use winit;
 
 /// Prelude module for common imports
 pub mod prelude {
+    pub use crate::assets::{AssetHandle, Assets, WeakAssetHandle};
     pub use crate::core::{DebugInfo, Engine, EngineConfig, EngineContext, FrameStats, Game};
     pub use crate::ecs::{Name, Transform, Velocity, World};
     pub use crate::input::Input;
