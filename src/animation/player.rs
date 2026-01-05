@@ -85,6 +85,15 @@ impl AnimationPlayer {
         }
 
         if let Some(clip) = &self.clip {
+            // Avoid division/modulo by zero for empty clips
+            if clip.duration <= 0.0 {
+                self.current_time = 0.0;
+                if !self.looping {
+                    self.state = PlaybackState::Stopped;
+                }
+                return;
+            }
+
             self.current_time += delta_time * self.speed;
 
             if self.current_time >= clip.duration {
