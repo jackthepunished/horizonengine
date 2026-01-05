@@ -83,13 +83,36 @@ impl Skeleton {
 
     /// Set parent-child relationship
     pub fn set_parent(&mut self, child: usize, parent: usize) {
-        if child < self.bones.len() && parent < self.bones.len() {
-            self.bones[child].parent = Some(parent);
-            if !self.bones[parent].children.contains(&child) {
-                self.bones[parent].children.push(child);
+        if child == parent || child >= self.bones.len() || parent >= self.bones.len() {
+            return;
+        }
+
+        // Check for cycles (walk up hierarchy)
+        let mut curr = parent;
+        while let Some(p) = self.bones[curr].parent {
+            if p == child {
+                return;
             }
-            // Remove from roots if it was a root
+            curr = p;
+        }
+
+        // Remove from old parent if needed
+        if let Some(old_parent) = self.bones[child].parent {
+            if old_parent != parent {
+                if let Some(old) = self.bones.get_mut(old_parent) {
+                    old.children.retain(|&c| c != child);
+                }
+            } else {
+                return;
+            }
+        } else {
+            // Was root
             self.roots.retain(|&r| r != child);
+        }
+
+        self.bones[child].parent = Some(parent);
+        if !self.bones[parent].children.contains(&child) {
+            self.bones[parent].children.push(child);
         }
     }
 
@@ -116,7 +139,9 @@ impl Skeleton {
         self.bones.iter().position(|b| b.name == name)
     }
 
-    /// Compute world matrices for all bones
+    /// Compute world matrices for all bones using hierarchy traversal
+    ///
+    /// This ensures correct calculation regardless of bone storage order.
     #[must_use]
     pub fn compute_world_matrices(&self) -> Vec<Mat4> {
         let mut world_matrices = vec![Mat4::IDENTITY; self.bones.len()];
@@ -228,5 +253,29 @@ mod tests {
         assert_eq!(skeleton.find_by_name("spine"), Some(1));
         assert_eq!(skeleton.find_by_name("head"), Some(2));
         assert_eq!(skeleton.find_by_name("missing"), None);
+    }
+
+    #[test]
+    fn test_out_of_order_bones() {
+        let mut skeleton = Skeleton::new();
+
+        // Add child first (index 0)
+        let child = Bone::new("child");
+        let child_idx = skeleton.add_bone(child);
+
+        // Add parent second (index 1)
+        let mut parent = Bone::new("parent");
+        parent.translation = Vec3::new(10.0, 0.0, 0.0);
+        let parent_idx = skeleton.add_bone(parent);
+
+        // Set parent: Child -> Parent
+        // This makes Child (0) depend on Parent (1)
+        skeleton.set_parent(child_idx, parent_idx);
+
+        let world_matrices = skeleton.compute_world_matrices();
+        let child_pos = world_matrices[child_idx].w_axis.truncate();
+
+        // Should be at 10.0 (Parent pos) + 0.0 (Child local)
+        assert!((child_pos.x - 10.0).abs() < 0.001);
     }
 }
