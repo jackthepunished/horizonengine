@@ -208,4 +208,16 @@ mod tests {
         let child_pos = world_matrices[child_idx].w_axis.truncate();
         assert!((child_pos.x - 3.0).abs() < 0.01);
     }
+
+    #[test]
+    fn test_find_by_name() {
+        let mut skeleton = Skeleton::new();
+        skeleton.add_bone(Bone::new("hip"));
+        skeleton.add_bone(Bone::new("spine"));
+        skeleton.add_bone(Bone::new("head"));
+
+        assert_eq!(skeleton.find_by_name("spine"), Some(1));
+        assert_eq!(skeleton.find_by_name("head"), Some(2));
+        assert_eq!(skeleton.find_by_name("missing"), None);
+    }
 }

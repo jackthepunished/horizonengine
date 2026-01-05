@@ -3,9 +3,10 @@
 //! Simple grid-based navigation for AI agents.
 
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::BinaryHeap;
 
 use glam::Vec2;
+use rustc_hash::FxHashMap;
 
 /// A 2D navigation grid
 #[derive(Debug, Clone)]
@@ -109,6 +110,15 @@ impl PathResult {
     }
 }
 
+impl Default for PathResult {
+    fn default() -> Self {
+        Self {
+            waypoints: Vec::new(),
+            length: 0.0,
+        }
+    }
+}
+
 /// A* node for priority queue
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -171,8 +181,8 @@ pub fn find_path(grid: &Grid, start: Vec2, goal: Vec2) -> PathResult {
 
     // A* implementation
     let mut open_set = BinaryHeap::new();
-    let mut came_from: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
-    let mut g_score: HashMap<(usize, usize), f32> = HashMap::new();
+    let mut came_from: FxHashMap<(usize, usize), (usize, usize)> = FxHashMap::default();
+    let mut g_score: FxHashMap<(usize, usize), f32> = FxHashMap::default();
 
     let heuristic = |x: usize, y: usize| -> f32 {
         let dx = (x as f32 - goal_x as f32).abs();

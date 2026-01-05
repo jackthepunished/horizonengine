@@ -84,6 +84,66 @@ impl Default for EmitterConfig {
     }
 }
 
+impl EmitterConfig {
+    /// Set maximum particles
+    #[must_use]
+    pub const fn with_max_particles(mut self, max: u32) -> Self {
+        self.max_particles = max;
+        self
+    }
+
+    /// Set spawn rate (particles per second)
+    #[must_use]
+    pub const fn with_spawn_rate(mut self, rate: f32) -> Self {
+        self.spawn_rate = rate;
+        self
+    }
+
+    /// Set lifetime range
+    #[must_use]
+    pub const fn with_lifetime(mut self, min: f32, max: f32) -> Self {
+        self.lifetime = (min, max);
+        self
+    }
+
+    /// Set velocity range
+    #[must_use]
+    pub fn with_velocity(mut self, min: Vec3, max: Vec3) -> Self {
+        self.velocity_min = min;
+        self.velocity_max = max;
+        self
+    }
+
+    /// Set size range
+    #[must_use]
+    pub const fn with_size(mut self, min: f32, max: f32) -> Self {
+        self.size = (min, max);
+        self
+    }
+
+    /// Set colors
+    #[must_use]
+    pub fn with_colors(mut self, start: Vec4, end: Vec4) -> Self {
+        self.start_color = start;
+        self.end_color = end;
+        self
+    }
+
+    /// Set gravity
+    #[must_use]
+    pub fn with_gravity(mut self, gravity: Vec3) -> Self {
+        self.gravity = gravity;
+        self
+    }
+
+    /// Set looping
+    #[must_use]
+    pub const fn with_looping(mut self, looping: bool) -> Self {
+        self.looping = looping;
+        self
+    }
+}
+
 /// Particle emitter
 #[derive(Debug)]
 pub struct ParticleEmitter {

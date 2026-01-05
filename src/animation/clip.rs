@@ -150,6 +150,12 @@ impl AnimationClip {
     }
 }
 
+impl Default for AnimationClip {
+    fn default() -> Self {
+        Self::new("untitled")
+    }
+}
+
 /// Sample Vec3 keyframes at a given time
 fn sample_vec3(keyframes: &[Keyframe<Vec3>], time: f32, interp: Interpolation) -> Vec3 {
     if keyframes.is_empty() {

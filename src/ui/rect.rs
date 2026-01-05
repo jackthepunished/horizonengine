@@ -70,6 +70,36 @@ impl Default for RectStyle {
     }
 }
 
+impl RectStyle {
+    /// Set background color
+    #[must_use]
+    pub const fn with_background(mut self, color: [f32; 4]) -> Self {
+        self.background_color = color;
+        self
+    }
+
+    /// Set border color
+    #[must_use]
+    pub const fn with_border_color(mut self, color: [f32; 4]) -> Self {
+        self.border_color = color;
+        self
+    }
+
+    /// Set border width
+    #[must_use]
+    pub const fn with_border_width(mut self, width: f32) -> Self {
+        self.border_width = width;
+        self
+    }
+
+    /// Set corner radius
+    #[must_use]
+    pub const fn with_corner_radius(mut self, radius: f32) -> Self {
+        self.corner_radius = radius;
+        self
+    }
+}
+
 /// A 2D rectangle for UI layout
 #[derive(Debug, Clone)]
 pub struct Rect {

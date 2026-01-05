@@ -252,4 +252,48 @@ mod tests {
         // Should have some acceleration towards target
         assert!(output.linear.x > 0.0);
     }
+
+    #[test]
+    fn test_wander() {
+        let mut wander = Wander::new(5.0);
+        let output = wander.calculate(Vec3::ZERO, Vec3::X);
+
+        // Should produce some steering
+        assert!(output.linear.length() > 0.0);
+
+        // Update angle
+        wander.update(0.8);
+        let output2 = wander.calculate(Vec3::ZERO, Vec3::X);
+
+        // Direction should change after update
+        assert!((output.linear - output2.linear).length() > 0.001);
+    }
+
+    #[test]
+    fn test_steering_output_combine() {
+        let a = SteeringOutput {
+            linear: Vec3::X,
+            angular: 1.0,
+        };
+        let b = SteeringOutput {
+            linear: Vec3::Y,
+            angular: 2.0,
+        };
+
+        let combined = a.combine(b);
+        assert!((combined.linear - Vec3::new(1.0, 1.0, 0.0)).length() < 0.01);
+        assert!((combined.angular - 3.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_steering_output_scale() {
+        let output = SteeringOutput {
+            linear: Vec3::X * 2.0,
+            angular: 4.0,
+        };
+        let scaled = output.scale(0.5);
+
+        assert!((scaled.linear.x - 1.0).abs() < 0.01);
+        assert!((scaled.angular - 2.0).abs() < 0.01);
+    }
 }
