@@ -4,7 +4,6 @@
 
 use bytemuck::{Pod, Zeroable};
 use glam::{Vec3, Vec4};
-use wgpu::util::DeviceExt;
 
 /// A single particle
 #[repr(C)]
@@ -306,22 +305,28 @@ impl ParticleEmitter {
         }
 
         let data = bytemuck::cast_slice(&self.particles);
+        let needed_size = data.len() as u64;
 
         if let Some(buffer) = &self.buffer
-            && buffer.size() >= data.len() as u64
+            && buffer.size() >= needed_size
         {
             queue.write_buffer(buffer, 0, data);
             return;
         }
 
-        // Create new buffer
-        self.buffer = Some(
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("particle_buffer"),
-                contents: data,
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            }),
-        );
+        // Calculate new size with growth factor (1.5x) to reduce allocations
+        let current_size = self.buffer.as_ref().map_or(0, |b| b.size());
+        let new_size = needed_size.max(current_size * 3 / 2);
+
+        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("particle_buffer"),
+            size: new_size,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        queue.write_buffer(&buffer, 0, data);
+        self.buffer = Some(buffer);
     }
 
     /// Get GPU buffer
