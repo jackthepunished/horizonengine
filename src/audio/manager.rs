@@ -16,6 +16,8 @@ pub struct AudioManager {
     mixer: Mixer,
     /// Named audio sources
     sources: HashMap<String, AudioSource>,
+    /// Per-source volume settings (before master volume applied)
+    source_volumes: HashMap<String, f32>,
     /// Master volume
     master_volume: f32,
     /// Whether audio is muted
@@ -39,6 +41,7 @@ impl AudioManager {
             _stream: stream,
             mixer,
             sources: HashMap::new(),
+            source_volumes: HashMap::new(),
             master_volume: 1.0,
             muted: false,
         })
@@ -56,7 +59,8 @@ impl AudioManager {
     ) -> Result<(), AudioError> {
         let name = name.into();
         let source = AudioSource::from_file(&self.mixer, path)?;
-        self.sources.insert(name, source);
+        self.sources.insert(name.clone(), source);
+        self.source_volumes.insert(name, 1.0);
         Ok(())
     }
 
@@ -68,7 +72,8 @@ impl AudioManager {
     ) -> Result<(), AudioError> {
         let name = name.into();
         let source = AudioSource::from_bytes(&self.mixer, bytes, &name)?;
-        self.sources.insert(name, source);
+        self.sources.insert(name.clone(), source);
+        self.source_volumes.insert(name, 1.0);
         Ok(())
     }
 
@@ -76,7 +81,8 @@ impl AudioManager {
     pub fn play(&mut self, name: &str) -> bool {
         if let Some(source) = self.sources.get_mut(name) {
             if !self.muted {
-                source.set_volume(self.master_volume);
+                let source_vol = self.source_volumes.get(name).copied().unwrap_or(1.0);
+                source.set_volume(source_vol * self.master_volume);
             }
             source.play();
             true
@@ -115,10 +121,12 @@ impl AudioManager {
     /// Set volume for a specific source
     pub fn set_volume(&mut self, name: &str, volume: f32) -> bool {
         if let Some(source) = self.sources.get_mut(name) {
+            let vol = volume.max(0.0);
+            self.source_volumes.insert(name.to_string(), vol);
             let effective_volume = if self.muted {
                 0.0
             } else {
-                volume * self.master_volume
+                vol * self.master_volume
             };
             source.set_volume(effective_volume);
             true
@@ -131,8 +139,9 @@ impl AudioManager {
     pub fn set_master_volume(&mut self, volume: f32) {
         self.master_volume = volume.max(0.0);
         if !self.muted {
-            for source in self.sources.values_mut() {
-                source.set_volume(self.master_volume);
+            for (name, source) in &mut self.sources {
+                let source_vol = self.source_volumes.get(name).copied().unwrap_or(1.0);
+                source.set_volume(source_vol * self.master_volume);
             }
         }
     }
@@ -154,8 +163,9 @@ impl AudioManager {
     /// Unmute all audio
     pub fn unmute(&mut self) {
         self.muted = false;
-        for source in self.sources.values_mut() {
-            source.set_volume(self.master_volume);
+        for (name, source) in &mut self.sources {
+            let source_vol = self.source_volumes.get(name).copied().unwrap_or(1.0);
+            source.set_volume(source_vol * self.master_volume);
         }
     }
 
@@ -187,6 +197,7 @@ impl AudioManager {
 
     /// Remove an audio source
     pub fn remove(&mut self, name: &str) -> Option<AudioSource> {
+        self.source_volumes.remove(name);
         self.sources.remove(name)
     }
 
