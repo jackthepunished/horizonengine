@@ -12,6 +12,7 @@ use winit::{
 
 use crate::core::Time;
 use crate::core::debug::DebugInfo;
+use crate::core::events::EventQueue;
 use crate::ecs::World;
 use crate::input::Input;
 use crate::renderer::Renderer;
@@ -98,6 +99,8 @@ pub struct EngineContext {
     pub world: World,
     /// Debug information and stats
     pub debug: DebugInfo,
+    /// Event queue for inter-system communication
+    pub events: EventQueue,
     /// Renderer (available after initialization)
     renderer: Option<Renderer>,
     /// Window size
@@ -113,6 +116,7 @@ impl EngineContext {
             input: Input::new(),
             world: World::new(),
             debug: DebugInfo::new(),
+            events: EventQueue::new(),
             renderer: None,
             window_size: PhysicalSize::new(width, height),
             should_quit: false,
@@ -281,6 +285,9 @@ impl<G: Game> ApplicationHandler for Engine<G> {
 
                 // Update debug stats
                 self.context.debug.record_frame(self.context.time.delta());
+
+                // Swap event buffers (events pushed last frame are now ready)
+                self.context.events.swap();
 
                 // Update game logic
                 self.game.update(&mut self.context);
