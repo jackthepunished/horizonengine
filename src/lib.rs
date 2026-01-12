@@ -31,7 +31,9 @@ pub use winit;
 /// Prelude module for common imports
 pub mod prelude {
     pub use crate::assets::{AssetHandle, Assets, WeakAssetHandle};
-    pub use crate::core::{DebugInfo, Engine, EngineConfig, EngineContext, FrameStats, Game};
+    pub use crate::core::{
+        DebugInfo, Engine, EngineConfig, EngineContext, EventQueue, FrameStats, Game, GameEvent,
+    };
     pub use crate::ecs::{Name, Transform, Velocity, World};
     pub use crate::input::Input;
     pub use crate::physics::{ColliderHandle, Physics, RigidBodyHandle};
